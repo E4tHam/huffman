@@ -5,7 +5,7 @@
 #	[commands {separated by tab}]
 
 CXX=g++
-DEPENDENCIES=main.o huffman.o
+DEPENDENCIES=main.o huffman.o encoder.o
 EXE=exe
 # REMOVE=
 

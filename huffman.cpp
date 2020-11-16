@@ -1,24 +1,68 @@
 
 /* huffman.cpp */
 
+
 #include "huffman.h"
 
-#include <vector>
-#include <utility>
 #include <algorithm>
 #include <queue>
 #include <math.h>
 
+#include <iostream>
 #include <fstream>
+#include <bitset>
 
 
 using namespace std;
 
 
 
-bool node_compare::operator()( const node * n1, const node * n2 ) const {
-    return n1->frequency > n2->frequency;
+/* ====== Symbol ====== */
+
+Symbol::Symbol( const uint8_t & size, const uint64_t & word )
+    : size(size), word(word) {
+
+    uint64_t mask = 0x03FFFFFFFFFFFFFF;
+    this->word &= ( mask >> (58-size) );
+    if ( size > 58 ) throw BadSymbolSize();
 }
+Symbol::Symbol( const Symbol & s ) {
+    size = s.size;
+    word = s.word;
+}
+
+Symbol & Symbol::add0() {
+    if ( size == 58 )
+        throw BadSymbolSize();
+    size++;
+    word <<= 1;
+    return *this;
+}
+Symbol & Symbol::add1() {
+    if ( size == 58 )
+        throw BadSymbolSize();
+    word <<= 1;
+    word |= 1;
+    size++;
+    return *this;
+}
+
+void Symbol::print() const {
+    if ( to_unit64_t() )
+        std::cout << std::bitset<58>( word ).to_string().substr( 58 - size ) << std::endl;
+    else
+        std::cout << "x\n";
+}
+
+size_t SymbolHash::operator() ( const Symbol & s ) const {
+    return hash<uint64_t>() (
+        s.to_unit64_t()
+    );
+}
+
+
+
+/* ====== node ====== */
 
 node::~node() {
     if ( left ) {
@@ -38,114 +82,18 @@ node::node( node * left, node * right )
                   + ( right ? right->frequency : 0 );
 }
 
+bool node_compare::operator()( const node * n1, const node * n2 ) const {
+    return n1->frequency > n2->frequency;
+}
+
+
+
+
+/* ====== Huffman ====== */
 
 
 Huffman::Huffman() { }
 
-class CouldNotOpenFile { };
-class BadEncodingSize { };
-
-struct counter {
-
-    counter( const uint8_t & encoding_size, const size_t & filelength )
-        : offset1(0),
-          offset2( encoding_size - 1 ),
-          encoding_size(encoding_size),
-          i(0),
-          filelength(filelength) {
-
-        if ( ( filelength << 3 ) % encoding_size  != 0 )
-            throw BadEncodingSize();
-
-        size = ceil( (float) encoding_size / 8 );
-
-        mask = 0x03FFFFFFFFFFFFFF;
-        mask >>= 58 - encoding_size;
-
-    }
-
-    bool hasNext() const {
-        return ( i != filelength-1 ) && ( offset2 != 7 );
-    }
-    void increment() {
-        i += ( encoding_size + offset1 ) / 8;
-        size = ceil( (float) ( encoding_size + offset1 ) / 8 );
-        offset1 = offset2 + 1;
-        offset2 = offset1 + encoding_size - 1;
-    }
-
-    uint8_t offset1 : 3;
-    uint8_t offset2 : 3;
-
-    uint8_t encoding_size : 6;
-
-    size_t i;
-    size_t filelength;
-    uint8_t size;
-
-    uint64_t mask;
-
-};
-
-
-Huffman::Huffman( const string & filename, const uint8_t & encoding_size )
-    : encoding_size(encoding_size) {
-    frequency_table ft;
-
-    ifstream ifs( filename, ifstream::binary );
-
-    if ( !ifs ) throw CouldNotOpenFile();
-
-    // get length of file:
-    ifs.seekg ( 0, ifs.end );
-    size_t length = ifs.tellg();
-    ifs.seekg ( 0, ifs.beg );
-
-    char * buffer = new char[ length ];
-    ifs.read( buffer, length );
-    ifs.close();
-
-
-    counter c( encoding_size, length );
-
-    while ( c.hasNext() ) {
-
-        uint64_t word;
-
-        // Set word to all 8 bytes before and including offset2
-        word = *(
-            ( uint64_t * )(
-                ( void * ) ( buffer + ( c.i + c.size - 8 ) )
-            )
-        );
-
-        // shift word according to offset2
-        word >> 7 - c.offset2;
-
-        // or in byte according to offset2
-        word |= ( *(
-            ( uint8_t * )(
-                ( void * ) ( buffer + ( c.i + c.size - 9 ) )
-            )
-        ) ) << ( 56 + c.offset2 - 7 ) ;
-
-        word &= c.mask;
-
-        Symbol temp( word, encoding_size );
-
-        if ( ft.find( temp ) != ft.end() )
-            ft[ temp ] += 1;
-        else
-            ft[ temp ] = 1;
-
-        c.increment();
-    }
-
-
-    delete [] buffer;
-
-    fill_tree( ft );
-}
 Huffman::Huffman( const frequency_table & ft ) {
     encoding_size = ft.begin()->first.getSize();
     fill_tree( ft );
@@ -197,12 +145,4 @@ void Huffman::print() {
         cout << "enco: "; i.second.print();
         cout << '\n';
     }
-}
-
-
-
-size_t SymbolHash::operator() ( const Symbol & s ) const {
-    return hash<uint64_t>() (
-        s.to_unit64_t()
-    );
 }

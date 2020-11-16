@@ -1,13 +1,12 @@
 
 /* huffman.h */
 
+
 #ifndef _HUFFMAN_
 #define _HUFFMAN_
 
 #include <stdint.h>
 #include <unordered_map>
-#include <iostream>
-#include <bitset>
 #include <string>
 
 
@@ -17,37 +16,17 @@ class Symbol {
 
         class BadSymbolSize { };
 
+        /* Default Constructor */
         Symbol() : size(0), word(0) { }
 
         /* Constructor */
-        Symbol( uint8_t size, uint64_t word )
-            : size(size), word(word) {
-            uint64_t mask = 0x03FFFFFFFFFFFFFF;
-            word &= ( mask >> (58-size) );
-            if ( size > 58 )
-                throw BadSymbolSize();
-        }
+        Symbol( const uint8_t & size, const uint64_t & word );
 
-        Symbol( const Symbol & s ) {
-            size = s.size;
-            word = s.word;
-        }
+        /* Copy Constructor */
+        Symbol( const Symbol & s );
 
-        Symbol & add0() {
-            if ( size == 58 )
-                throw BadSymbolSize();
-            size++;
-            word <<= 1;
-            return *this;
-        }
-        Symbol & add1() {
-            if ( size == 58 )
-                throw BadSymbolSize();
-            word <<= 1;
-            word |= 1;
-            size++;
-            return *this;
-        }
+        Symbol & add0();
+        Symbol & add1();
 
         /* Get Size of Enocoded String */
         uint8_t getSize() const {
@@ -68,12 +47,7 @@ class Symbol {
         }
 
         /* Print */
-        void print() const {
-            if ( to_unit64_t() )
-                std::cout << std::bitset<58>( word ).to_string().substr( 58 - size ) << std::endl;
-            else
-                std::cout << "x\n";
-        }
+        void print() const;
 
     private:
         uint64_t word : 58 ;
@@ -84,6 +58,7 @@ class Symbol {
 struct SymbolHash {
     size_t operator() ( const Symbol & s ) const ;
 };
+
 
 
 struct node {
@@ -109,11 +84,13 @@ struct node_compare {
 class Huffman {
 
     public:
+        class CouldNotOpenFile { };
+        class BadEncodingSize { };
+
         typedef std::unordered_map< Symbol, size_t, SymbolHash > frequency_table;
         typedef std::unordered_map< Symbol, Symbol, SymbolHash > lookup_table;
 
         Huffman();
-        Huffman( const std::string & filename, const uint8_t & encoding_size = 16 );
         Huffman( const frequency_table & );
 
         void print();
