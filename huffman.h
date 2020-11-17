@@ -86,12 +86,16 @@ class Huffman {
     public:
         class CouldNotOpenFile { };
         class BadEncodingSize { };
+        class NoSuchSymbol { };
 
         typedef std::unordered_map< Symbol, size_t, SymbolHash > frequency_table;
         typedef std::unordered_map< Symbol, Symbol, SymbolHash > lookup_table;
 
         Huffman();
         Huffman( const frequency_table & );
+
+        Symbol encode( const Symbol & ) const;
+        Symbol decode( const Symbol & ) const;
 
         void print();
 

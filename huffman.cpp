@@ -138,6 +138,18 @@ void Huffman::fill_tables( node * n, const Symbol & encoding ) {
     }
 }
 
+Symbol Huffman::encode( const Symbol & s ) const {
+    auto it = encoding_table.find( s );
+    if ( it == encoding_table.end() )
+        throw NoSuchSymbol();
+    return it->first;
+}
+Symbol Huffman::decode( const Symbol & s ) const {
+    auto it = decoding_table.find( s );
+    if ( it == decoding_table.end() )
+        throw NoSuchSymbol();
+    return it->first;
+}
 
 void Huffman::print() {
     for ( auto i : encoding_table ) {
