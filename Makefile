@@ -7,7 +7,7 @@
 CXX=g++
 DEPENDENCIES=main.o huffman.o encoder.o
 EXE=exe
-# REMOVE=
+REMOVE=*.huff
 
 all: clean ${EXE}
 
@@ -23,5 +23,4 @@ debug: ${DEPENDENCIES}
 # $^ ··· {Dependencies}
 
 clean:
-	rm -f *.o ${EXE}
-# ${REMOVE}
+	rm -f *.o ${EXE} ${REMOVE}
